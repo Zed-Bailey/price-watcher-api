@@ -2,7 +2,7 @@ package model
 
 import "github.com/jinzhu/gorm"
 
-type WatchingItem struct {
+type Product struct {
 	gorm.Model
 
 	UserReference string

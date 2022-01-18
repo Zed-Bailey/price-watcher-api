@@ -32,8 +32,8 @@ func GetItems(c *gin.Context) {
 	// //TODO check result for error
 	// model.DB.First(&user, model.User{UserID: id})
 	user := getUser(c)
-	model.DB.Model(&user).Related(&user.WatchingProducts)
-	c.JSON(http.StatusOK, gin.H{"data": user.WatchingProducts})
+	model.DB.Model(&user).Related(&user.Products)
+	c.JSON(http.StatusOK, gin.H{"data": user.Products})
 
 }
 
@@ -52,11 +52,11 @@ func CreateItem(c *gin.Context) {
 	// get the user
 	user := getUser(c)
 	// fetch the current items
-	currentItems := user.WatchingProducts
+	currentItems := user.Products
 	// appened the enw item
-	item := model.WatchingItem{Url: input.Url, ItemName: input.ItemName, LastChecked: "", NextCheck: "", CurrentPrice: 0}
+	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: "", NextCheck: "", CurrentPrice: 0}
 	currentItems = append(currentItems, item)
 	// update the user in the db
-	model.DB.Model(&user).Updates(model.User{WatchingProducts: currentItems})
+	model.DB.Model(&user).Updates(model.User{Products: currentItems})
 	c.JSON(http.StatusOK, gin.H{"data": item})
 }
