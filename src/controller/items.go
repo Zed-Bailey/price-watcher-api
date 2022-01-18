@@ -6,17 +6,19 @@ import (
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 func getUser(c *gin.Context) model.User {
 	token := c.Request.Header.Get("Bearer")
 	session := sessions.Default(c)
 	// gets the user id associated with the token, converts it to a string
-	id := session.Get(token).(string)
+	id := session.Get(token).(uint)
 
 	var user model.User
+	findUser := model.User{Model: gorm.Model{ID: id}}
 	//TODO check result for error
-	model.DB.First(&user, model.User{UserID: id})
+	model.DB.First(&user, findUser)
 	return user
 }
 

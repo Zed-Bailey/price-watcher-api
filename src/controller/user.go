@@ -43,7 +43,7 @@ func Signup(c *gin.Context) {
 
 	// generate a new session token
 	token := generateToken()
-	session.Set(token, newUser.UserID)
+	session.Set(token, newUser.ID)
 	// save session
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving user session"})
@@ -51,7 +51,7 @@ func Signup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": "successfully created new user",
-		"id":    newUser.UserID,
+		"id":    newUser.ID,
 		"token": token,
 	})
 }
@@ -90,7 +90,7 @@ func Login(c *gin.Context) {
 	token := generateToken()
 	// save the token to the session
 	session := sessions.Default(c)
-	session.Set(token, loggedInUser.UserID)
+	session.Set(token, loggedInUser.ID)
 
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
