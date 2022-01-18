@@ -1,7 +1,10 @@
 package model
 
+import "github.com/jinzhu/gorm"
+
 type WatchingItem struct {
-	ItemID        string `json:"id" gorm:"primary_key"`
+	gorm.Model
+
 	UserReference string
 	Url           string  `json:"url"`
 	ItemName      string  `json:"item_name"`
