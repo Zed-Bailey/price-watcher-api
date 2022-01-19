@@ -26,9 +26,12 @@ func main() {
 	// setup endpoints that can only be accessed with a bearer token
 	private.Use(AuthorizedEndpoint)
 	{
-		private.GET("/items", controller.GetItems)
 		private.GET("/logout", controller.Logout)
+
+		private.GET("/items", controller.GetItems)
 		private.POST("/items", controller.CreateItem)
+		private.DELETE("/items/:id", controller.DeleteItem)
+
 	}
 
 	r.Run()

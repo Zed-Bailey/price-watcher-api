@@ -3,13 +3,19 @@ package controller
 import (
 	"RestService/src/model"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
-func getUser(c *gin.Context) model.User {
+/*
+useful links
+https://gorm.io/docs/associations.html#Association-Mode
+*/
+
+func getUser(c *gin.Context) (model.User, error) {
 	token := c.Request.Header.Get("Bearer")
 	session := sessions.Default(c)
 	// gets the user id associated with the token, converts it to a string
@@ -18,23 +24,19 @@ func getUser(c *gin.Context) model.User {
 	var user model.User
 	findUser := model.User{Model: gorm.Model{ID: id}}
 	//TODO check result for error
-	model.DB.First(&user, findUser)
-	return user
+	result := model.DB.First(&user, findUser)
+	return user, result.Error
 }
 
 func GetItems(c *gin.Context) {
-	// token := c.Request.Header.Get("Bearer")
-	// session := sessions.Default(c)
-	// // gets the user id associated with the token, converts it to a string
-	// id := session.Get(token).(string)
+	user, err := getUser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
-	// var user model.User
-	// //TODO check result for error
-	// model.DB.First(&user, model.User{UserID: id})
-	user := getUser(c)
 	model.DB.Model(&user).Related(&user.Products)
 	c.JSON(http.StatusOK, gin.H{"data": user.Products})
-
 }
 
 type ItemInput struct {
@@ -50,7 +52,11 @@ func CreateItem(c *gin.Context) {
 	}
 
 	// get the user
-	user := getUser(c)
+	user, err := getUser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
 	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: "", NextCheck: "", CurrentPrice: 0}
 	// add the new item to the user via association
@@ -62,4 +68,38 @@ func CreateItem(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": item})
+}
+
+// DELETE /private/items/:id
+// removes a product with the specified id from the database
+func DeleteItem(c *gin.Context) {
+
+	// https://gorm.io/docs/delete.html
+
+	itemIdString := c.Param("id")
+	user, err := getUser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
+	itemId, err := strconv.ParseUint(itemIdString, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	var productToDelete model.Product
+
+	// find product in db
+	model.DB.Where(&model.Product{Model: gorm.Model{ID: uint(itemId)}}).First(&productToDelete)
+
+	// remove association between product and user
+	model.DB.Model(&user).Association("Products").Delete(&productToDelete)
+
+	// NOTE: at the moment the following line is doing a soft delete, so the object is still in the db
+	// BUT it cant be queried, so calling GetItems will not return the object in the response
+	model.DB.Delete(&productToDelete)
+
+	c.JSON(http.StatusOK, gin.H{"data": "removed product sucessfully", "product": productToDelete})
 }
