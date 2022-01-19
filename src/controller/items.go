@@ -51,12 +51,15 @@ func CreateItem(c *gin.Context) {
 
 	// get the user
 	user := getUser(c)
-	// fetch the current items
-	currentItems := user.Products
-	// appened the enw item
+
 	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: "", NextCheck: "", CurrentPrice: 0}
-	currentItems = append(currentItems, item)
-	// update the user in the db
-	model.DB.Model(&user).Updates(model.User{Products: currentItems})
+	// add the new item to the user via association
+	result := model.DB.Model(&user).Association("Products").Append(&item)
+
+	if result.Error != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"data": item})
 }
