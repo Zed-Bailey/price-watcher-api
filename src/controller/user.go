@@ -91,7 +91,9 @@ func Login(c *gin.Context) {
 	// save the token to the session
 	session := sessions.Default(c)
 	session.Set(token, loggedInUser.ID)
-
+	session.Options(sessions.Options{
+		MaxAge: 3600 * 12, // set session to expire in 12 hours
+	})
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
