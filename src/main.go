@@ -31,6 +31,7 @@ func main() {
 		private.GET("/items", controller.GetItems)
 		private.POST("/items", controller.CreateItem)
 		private.DELETE("/items/:id", controller.DeleteItem)
+		private.PATCH("/items/:id", controller.UpdateItem)
 
 	}
 

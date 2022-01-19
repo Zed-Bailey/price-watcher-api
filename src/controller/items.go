@@ -15,6 +15,7 @@ useful links
 https://gorm.io/docs/associations.html#Association-Mode
 */
 
+// function to simplify getting a user from session
 func getUser(c *gin.Context) (model.User, error) {
 	token := c.Request.Header.Get("Bearer")
 	session := sessions.Default(c)
@@ -39,13 +40,14 @@ func GetItems(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": user.Products})
 }
 
-type ItemInput struct {
-	Url      string `json:"url"`
-	ItemName string `json:"item_name"`
+type CreateItemInput struct {
+	Url      string `json:"url" binding:"required"`
+	ItemName string `json:"item_name" binding:"required"`
 }
 
+// POST /private/items
 func CreateItem(c *gin.Context) {
-	var input ItemInput
+	var input CreateItemInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -102,4 +104,31 @@ func DeleteItem(c *gin.Context) {
 	model.DB.Delete(&productToDelete)
 
 	c.JSON(http.StatusOK, gin.H{"data": "removed product sucessfully", "product": productToDelete})
+}
+
+type UpdateItemInput struct {
+	Url      string `json:"url"`
+	ItemName string `json:"item_name"`
+}
+
+// PATCH /private/items/:id
+func UpdateItem(c *gin.Context) {
+
+	// find product
+	var updateProduct model.Product
+	if err := model.DB.Where("id = ?", c.Param("id")).First(&updateProduct).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product could not be found"})
+		return
+	}
+
+	// validate update input
+	var input UpdateItemInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// update product
+	model.DB.Model(&updateProduct).Update(input)
+	c.JSON(http.StatusOK, gin.H{"data": "updated product", "product": updateProduct})
 }
