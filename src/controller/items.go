@@ -3,7 +3,6 @@ package controller
 import (
 	"RestService/src/model"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -78,23 +77,20 @@ func DeleteItem(c *gin.Context) {
 
 	// https://gorm.io/docs/delete.html
 
-	itemIdString := c.Param("id")
+	itemId := c.Param("id")
 	user, err := getUser(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
 
-	itemId, err := strconv.ParseUint(itemIdString, 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
 	var productToDelete model.Product
 
 	// find product in db
-	model.DB.Where(&model.Product{Model: gorm.Model{ID: uint(itemId)}}).First(&productToDelete)
+	if err := model.DB.Where("id = ?", itemId).First(&productToDelete).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "product could not be found"})
+		return
+	}
 
 	// remove association between product and user
 	model.DB.Model(&user).Association("Products").Delete(&productToDelete)
