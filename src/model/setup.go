@@ -16,6 +16,6 @@ func SetupDatabase() {
 	}
 
 	database.AutoMigrate(&User{})
-	database.AutoMigrate(&WatchingItem{})
+	database.AutoMigrate(&Product{})
 	DB = database
 }

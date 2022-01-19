@@ -1,8 +1,10 @@
 package model
 
+import "github.com/jinzhu/gorm"
+
 type User struct {
-	UserID           string `gorm:"primary_key"`
-	Email            string
-	Password         string
-	WatchingProducts []WatchingItem `json:"items" gorm:"foreignKey:UserReference"`
+	gorm.Model
+	Email    string
+	Password string
+	Products []Product `json:"items" gorm:"foreignKey:UserID"`
 }
