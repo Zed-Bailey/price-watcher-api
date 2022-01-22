@@ -84,7 +84,7 @@ func Login(c *gin.Context) {
 
 	// // check if a record was returned
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No user found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No user found with that email/password"})
 		return
 	}
 	token := generateToken()

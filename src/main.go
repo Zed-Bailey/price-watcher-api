@@ -9,6 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+/*
+
+TODO prevent user from logging in multiple times and generating multiple tokens, should return the same token as whats in the session
+
+*/
+
 func main() {
 	// https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/
 	// https://github.com/Depado/gin-auth-example/blob/master/main.go
