@@ -3,6 +3,7 @@ package main
 import (
 	"RestService/src/controller"
 	"RestService/src/model"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/contrib/sessions"
@@ -61,9 +62,17 @@ func CORSMiddleware() gin.HandlerFunc {
 }
 
 func AuthorizedEndpoint(c *gin.Context) {
-	token := c.Request.Header.Get("Bearer")
+	// get token from request header
+	token, err := c.Request.Cookie("token")
+	if errors.Is(err, http.ErrNoCookie) {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "no cookie named token sent with request!"})
+		return
+	}
+
+	// token := c.Request.Header.Get("Bearer")
 	session := sessions.Default(c)
-	user := session.Get(token)
+	// get token value
+	user := session.Get(token.Value)
 	if user == nil {
 		// Abort the request with the appropriate error code
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
