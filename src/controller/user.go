@@ -98,6 +98,9 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
+
+	c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
+
 	// should return a token that can be used to access authenticated points later on
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"token": token}})
 }
@@ -107,6 +110,7 @@ func Login(c *gin.Context) {
 //
 func Logout(c *gin.Context) {
 	token := c.Request.Header.Get("Bearer")
+
 	session := sessions.Default(c)
 
 	// check if there is a valid token in the session
