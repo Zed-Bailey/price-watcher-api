@@ -24,6 +24,7 @@ func main() {
 	// https://pkg.go.dev/github.com/robfig/cron
 	cj := cron.New()
 	cj.AddFunc("@daily", jobs.CheckSites)
+	defer cj.Stop()
 
 	// setup gin api routes
 	// https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/
