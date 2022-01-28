@@ -15,7 +15,7 @@ func CheckSites() {
 
 	if result.Error != nil {
 		log.Error().
-			Str("ERROR", result.Error.Error())
+			Err(result.Error)
 		return
 	}
 
