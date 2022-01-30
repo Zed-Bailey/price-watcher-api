@@ -84,18 +84,23 @@ func Login(c *gin.Context) {
 
 	// // check if a record was returned
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No user found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "No user found with that email/password"})
 		return
 	}
 	token := generateToken()
 	// save the token to the session
 	session := sessions.Default(c)
 	session.Set(token, loggedInUser.ID)
-
+	session.Options(sessions.Options{
+		MaxAge: 3600 * 12, // set session to expire in 12 hours
+	})
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
+
+	c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
+
 	// should return a token that can be used to access authenticated points later on
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"token": token}})
 }
@@ -105,6 +110,7 @@ func Login(c *gin.Context) {
 //
 func Logout(c *gin.Context) {
 	token := c.Request.Header.Get("Bearer")
+
 	session := sessions.Default(c)
 
 	// check if there is a valid token in the session

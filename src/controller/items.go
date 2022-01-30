@@ -3,6 +3,7 @@ package controller
 import (
 	"RestService/src/model"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,10 @@ https://gorm.io/docs/associations.html#Association-Mode
 
 // function to simplify getting a user from session
 func getUser(c *gin.Context) (model.User, error) {
-	token := c.Request.Header.Get("Bearer")
+	token, _ := c.Request.Cookie("token")
 	session := sessions.Default(c)
 	// gets the user id associated with the token, converts it to a string
-	id := session.Get(token).(uint)
+	id := session.Get(token.Value).(uint)
 
 	var user model.User
 	findUser := model.User{Model: gorm.Model{ID: id}}
@@ -36,7 +37,7 @@ func GetItems(c *gin.Context) {
 	}
 
 	model.DB.Model(&user).Related(&user.Products)
-	c.JSON(http.StatusOK, gin.H{"data": user.Products})
+	c.JSON(http.StatusOK, user.Products)
 }
 
 type CreateItemInput struct {
@@ -58,8 +59,10 @@ func CreateItem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
-
-	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: "", NextCheck: "", CurrentPrice: 0}
+	dateNow := time.Now()
+	// add a day
+	nextCheck := dateNow.AddDate(0, 0, 1)
+	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: dateNow.String(), NextCheck: nextCheck.String(), CurrentPrice: 0}
 	// add the new item to the user via association
 	result := model.DB.Model(&user).Association("Products").Append(&item)
 
