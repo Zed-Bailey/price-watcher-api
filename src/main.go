@@ -2,12 +2,14 @@ package main
 
 import (
 	"RestService/src/controller"
+	"RestService/src/jobs"
 	"RestService/src/model"
 	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/robfig/cron/v3"
 )
 
 /*
@@ -17,6 +19,14 @@ TODO prevent user from logging in multiple times and generating multiple tokens,
 */
 
 func main() {
+
+	// setting up cron job
+	// https://pkg.go.dev/github.com/robfig/cron
+	cj := cron.New()
+	cj.AddFunc("@daily", jobs.CheckSites)
+	defer cj.Stop()
+
+	// setup gin api routes
 	// https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/
 	// https://github.com/Depado/gin-auth-example/blob/master/main.go
 	r := gin.Default()
@@ -34,14 +44,13 @@ func main() {
 	private.Use(AuthorizedEndpoint)
 	{
 		private.GET("/logout", controller.Logout)
-
 		private.GET("/items", controller.GetItems)
 		private.POST("/items", controller.CreateItem)
 		private.DELETE("/items/:id", controller.DeleteItem)
 		private.PATCH("/items/:id", controller.UpdateItem)
-
 	}
-
+	// start cron jobs and router
+	cj.Start()
 	r.Run()
 }
 
