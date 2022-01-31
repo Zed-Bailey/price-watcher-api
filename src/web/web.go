@@ -3,8 +3,10 @@ package web
 import (
 	"errors"
 	"net/url"
+	"strconv"
 	"strings"
 
+	"github.com/gocolly/colly"
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,20 +26,30 @@ func Fetch(urlString string) (float64, error) {
 	if strings.Contains(host, "amazon") {
 		// run amazon scraper function
 		return scrapeAmazon(urlString), nil
-	} 
-	else if strings.Contains(host, "ebay") {
+	} else if strings.Contains(host, "ebay") {
 		// TODO ebay scraper function
 		return scrapeEbay(urlString), nil
 	}
-	
 
 	return 0, errors.New("url is not currently supported")
 }
 
 // scrape an amazon url
 func scrapeAmazon(url string) float64 {
-	// TODO implement
-	return 0
+	var price float64
+
+	collector := colly.NewCollector()
+
+	collector.OnHTML("span.a-price-whole", func(e *colly.HTMLElement) {
+		priceUnClean := e.Text
+		// remove commas from price if any
+		priceClean := strings.ReplaceAll(priceUnClean, ",", "")
+		price, _ = strconv.ParseFloat(priceClean, 64)
+	})
+
+	collector.Visit(url)
+	collector.Wait()
+	return price
 }
 
 // scrape an ebay url
@@ -45,3 +57,13 @@ func scrapeEbay(url string) float64 {
 	// TODO implement
 	return 0
 }
+
+// https://stackoverflow.com/a/48798875
+// func trimLeftChar(s string) string {
+// 	for i := range s {
+// 		if i > 0 {
+// 			return s[i:]
+// 		}
+// 	}
+// 	return s[:0]
+// }
