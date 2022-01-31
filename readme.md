@@ -7,3 +7,7 @@ The backend api is written in Go with the [Gin](https://github.com/gin-gonic/gin
 Go was choosen for this project as 
 - it's lightweight(compared to using c# + asp.net as i originally planned on doing) 
 - easy to distribute with it's single binary builds
+
+## Frontend
+
+The frontend for this API can be found [here](https://github.com/Zed-Inc/price-watcher)
