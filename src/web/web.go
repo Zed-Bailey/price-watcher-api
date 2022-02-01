@@ -2,7 +2,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -11,7 +10,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// fetches
+// TODO make the scrape async so i can pass in an array of links?
+
+// fetches the price from the url
 func Fetch(urlString string) (float64, error) {
 	// https://stackoverflow.com/questions/31480710/validate-url-with-standard-package-in-go
 	// parse the url
@@ -28,7 +29,6 @@ func Fetch(urlString string) (float64, error) {
 		// run amazon scraper function
 		return scrapeAmazon(urlString), nil
 	} else if strings.Contains(host, "ebay") {
-		// TODO ebay scraper function
 		return scrapeEbay(urlString), nil
 	}
 
@@ -60,7 +60,6 @@ func scrapeEbay(url string) float64 {
 
 	collector.OnHTML(".mainPrice", func(e *colly.HTMLElement) {
 		text := e.ChildAttr("span", "content")
-		fmt.Println(text)
 		price, _ = strconv.ParseFloat(text, 64)
 	})
 

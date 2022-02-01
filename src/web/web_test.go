@@ -38,3 +38,12 @@ func TestFetchingPriceEbay(t *testing.T) {
 	}
 
 }
+
+func TestInvalidURl(t *testing.T) {
+	testUrl := "https://www.fakeurl.com.au/item/test"
+	got, err := web.Fetch(testUrl)
+
+	if got != 0 && err == nil {
+		t.Errorf("Got price %f but expected 0 as url was invalid\nreturned error was nil but expected error", got)
+	}
+}
