@@ -2,6 +2,7 @@ package controller
 
 import (
 	"RestService/src/model"
+	"RestService/src/web"
 	"net/http"
 	"time"
 
@@ -15,6 +16,9 @@ useful links
 https://gorm.io/docs/associations.html#Association-Mode
 */
 
+/**************************************
+*					 	   UTILITY  							*
+***************************************/
 // function to simplify getting a user from session
 func getUser(c *gin.Context) (model.User, error) {
 	token, _ := c.Request.Cookie("token")
@@ -29,6 +33,9 @@ func getUser(c *gin.Context) (model.User, error) {
 	return user, result.Error
 }
 
+/**************************************
+*					 	 FETCH ITEM 							*
+***************************************/
 func GetItems(c *gin.Context) {
 	user, err := getUser(c)
 	if err != nil {
@@ -40,6 +47,9 @@ func GetItems(c *gin.Context) {
 	c.JSON(http.StatusOK, user.Products)
 }
 
+/**************************************
+*						CREATE ITEM 							*
+***************************************/
 type CreateItemInput struct {
 	Url      string `json:"url" binding:"required"`
 	ItemName string `json:"item_name" binding:"required"`
@@ -59,10 +69,23 @@ func CreateItem(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+	currPrice, err := web.Fetch(input.Url)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error})
+		return
+	}
+
 	dateNow := time.Now()
 	// add a day
 	nextCheck := dateNow.AddDate(0, 0, 1)
-	item := model.Product{Url: input.Url, ItemName: input.ItemName, LastChecked: dateNow.String(), NextCheck: nextCheck.String(), CurrentPrice: 0}
+	// add values to struct
+	item := model.Product{
+		Url:          input.Url,
+		ItemName:     input.ItemName,
+		LastChecked:  dateNow.Format("01/02/2006"),
+		NextCheck:    nextCheck.Format("01/02/2006"),
+		CurrentPrice: currPrice,
+	}
 	// add the new item to the user via association
 	result := model.DB.Model(&user).Association("Products").Append(&item)
 
@@ -74,6 +97,9 @@ func CreateItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": item})
 }
 
+/**************************************
+*						DELETE ITEM 							*
+***************************************/
 // DELETE /private/items/:id
 // removes a product with the specified id from the database
 func DeleteItem(c *gin.Context) {
@@ -105,6 +131,9 @@ func DeleteItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": "removed product sucessfully", "product": productToDelete})
 }
 
+/**************************************
+*						UPDATE ITEM 							*
+***************************************/
 type UpdateItemInput struct {
 	Url      string `json:"url"`
 	ItemName string `json:"item_name"`
