@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
+	"github.com/rs/zerolog/log"
 )
 
 /*
@@ -25,6 +26,7 @@ func main() {
 	cj := cron.New()
 	cj.AddFunc("@daily", jobs.CheckSites)
 	defer cj.Stop()
+	log.Info().Msg("Setup cron jobs")
 
 	// setup gin api routes
 	// https://blog.logrocket.com/how-to-build-a-rest-api-with-golang-using-gin-and-gorm/

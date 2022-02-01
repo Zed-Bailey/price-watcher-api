@@ -15,13 +15,15 @@ func CheckSites() {
 
 	if result.Error != nil {
 		log.Error().
-			Err(result.Error)
+			Err(result.Error).
+			Msg("Failed to fetch items from the db")
+
 		return
 	}
 
 	log.Info().
-		Str("message", "Checking all items").
-		Int("number of products to check", len(items))
+		Int("number of products to check", len(items)).
+		Msg("Checking all items")
 
 	if len(items) > 0 {
 		var group sync.WaitGroup
@@ -34,8 +36,7 @@ func CheckSites() {
 
 		// wait for all routines to finish
 		group.Wait()
-		log.Info().
-			Str("message", "Finished checking all items")
+		log.Info().Msg("Finished checking all items")
 	}
 }
 
