@@ -16,15 +16,38 @@ import (
 
 // https://gorm.io/docs/query.html
 
+/**************************************
+* 					 	 UTILITY   							*
+***************************************/
+// generates a random 30 character token, proably not secure but for now it'll do
+func generateToken() string {
+	b := make([]byte, 30)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+/**************************************
+* 					 	 SIGNUP    							*
+***************************************/
 // POST /user
 // create a new user
 // returns a token that can be used to further access the authenticated points of the api
 func Signup(c *gin.Context) {
 	session := sessions.Default(c)
 
-	email := c.PostForm("email")
-	pass := c.PostForm("password")
+	auth := c.Request.Header.Get("Authorization")
+	// base64 decode
+	dec, _ := b64.StdEncoding.DecodeString(auth)
+	// split on ':'
+	split := strings.Split(string(dec), ":")
 
+	// check that there are 2 parts to the split string
+	if len(split) != 2 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to decode authorization header"})
+		return
+	}
+	email := split[0]
+	pass := split[1]
 	if strings.Trim(email, " ") == " " || strings.Trim(pass, " ") == " " {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Parameters can't be empty"})
 		return
@@ -35,7 +58,7 @@ func Signup(c *gin.Context) {
 	result := model.DB.First(&existing, model.User{Email: email})
 
 	if result.RowsAffected != 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use!"})
 		return
 	}
 	newUser := model.User{Email: email, Password: pass}
@@ -50,12 +73,17 @@ func Signup(c *gin.Context) {
 		return
 	}
 
+	c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
+	// should return a token that can be used to access authenticated points later on
 	c.JSON(http.StatusOK, gin.H{"data": "successfully created new user",
 		"id":    newUser.ID,
 		"token": token,
 	})
 }
 
+/**************************************
+* 					 	 LOGIN    							*
+***************************************/
 // GET /user
 // Login a user with email/password combo using basic auth
 // email and password should be joined with a ':' and then encoded with base64
@@ -82,11 +110,12 @@ func Login(c *gin.Context) {
 	// select the first user with matching email/password combo
 	result := model.DB.Where(&model.User{Email: split[0], Password: split[1]}).First(&loggedInUser)
 
-	// // check if a record was returned
+	// check if a record was returned
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "No user found with that email/password"})
 		return
 	}
+
 	token := generateToken()
 	// save the token to the session
 	session := sessions.Default(c)
@@ -105,16 +134,25 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": gin.H{"token": token}})
 }
 
+/**************************************
+* 					 	 LOGOUT    							*
+***************************************/
 // GET /logout
 // logs a user out of the application
 //
 func Logout(c *gin.Context) {
-	token := c.Request.Header.Get("Bearer")
+
+	// fetch cookie from request
+	token, err := c.Request.Cookie("token")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No session cookie passed"})
+		return
+	}
 
 	session := sessions.Default(c)
 
 	// check if there is a valid token in the session
-	if user := session.Get(token); user == nil {
+	if user := session.Get(token.Value); user == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
 		return
 	}
@@ -126,11 +164,4 @@ func Logout(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{})
-}
-
-// generates a random 30 character token, proably not secure but for now it'll do
-func generateToken() string {
-	b := make([]byte, 30)
-	rand.Read(b)
-	return hex.EncodeToString(b)
 }
