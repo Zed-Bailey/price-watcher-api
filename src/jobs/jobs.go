@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"RestService/src/model"
+	"RestService/src/web"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -42,5 +43,12 @@ func CheckSites() {
 
 func checkPrice(product model.Product, wg *sync.WaitGroup) {
 	defer wg.Done()
-
+	price, _ := web.Fetch(product.Url)
+	if price < product.CurrentPrice {
+		product.CurrentPrice = price
+		result := model.DB.Save(&product)
+		if result.Error != nil {
+			log.Error().Err(result.Error).Msg("failed to update model in database!")
+		}
+	}
 }
