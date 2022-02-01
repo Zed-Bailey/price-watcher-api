@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -54,8 +55,19 @@ func scrapeAmazon(url string) float64 {
 
 // scrape an ebay url
 func scrapeEbay(url string) float64 {
-	// TODO implement
-	return 0
+	var price float64
+	collector := colly.NewCollector()
+
+	collector.OnHTML(".mainPrice", func(e *colly.HTMLElement) {
+		text := e.ChildAttr("span", "content")
+		fmt.Println(text)
+		price, _ = strconv.ParseFloat(text, 64)
+	})
+
+	collector.Visit(url)
+	collector.Wait()
+
+	return price
 }
 
 // https://stackoverflow.com/a/48798875
