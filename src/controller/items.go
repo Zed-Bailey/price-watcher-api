@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"RestService/src/logger"
 	"RestService/src/model"
 	"RestService/src/web"
 	"net/http"
@@ -19,13 +20,14 @@ https://gorm.io/docs/associations.html#Association-Mode
 /**************************************
 *					 	   UTILITY  							*
 ***************************************/
+
 // function to simplify getting a user from session
 func getUser(c *gin.Context) (model.User, error) {
-	token, _ := c.Request.Cookie("token")
+	// token, _ := c.Request.Cookie("token")
 	session := sessions.Default(c)
 	// gets the user id associated with the token, converts it to a string
-	id := session.Get(token.Value).(uint)
-
+	id := session.Get("userID").(uint)
+	logger.Log.Info().Uint("id", id).Msg("id fetched from session")
 	var user model.User
 	findUser := model.User{Model: gorm.Model{ID: id}}
 	//TODO check result for error
@@ -36,6 +38,7 @@ func getUser(c *gin.Context) (model.User, error) {
 /**************************************
 *					 	 FETCH ITEM 							*
 ***************************************/
+
 func GetItems(c *gin.Context) {
 	user, err := getUser(c)
 	if err != nil {

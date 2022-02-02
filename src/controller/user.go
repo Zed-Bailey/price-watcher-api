@@ -1,10 +1,9 @@
 package controller
 
 import (
+	"RestService/src/logger"
 	"RestService/src/model"
-	"crypto/rand"
 	b64 "encoding/base64"
-	"encoding/hex"
 	"errors"
 	"net/http"
 	"strings"
@@ -19,17 +18,20 @@ import (
 /**************************************
 * 					 	 UTILITY   							*
 ***************************************/
+
+//
 // generates a random 30 character token, proably not secure but for now it'll do
-func generateToken() string {
-	b := make([]byte, 30)
-	rand.Read(b)
-	return hex.EncodeToString(b)
-}
+// func generateToken() string {
+// 	b := make([]byte, 30)
+// 	rand.Read(b)
+// 	return hex.EncodeToString(b)
+// }
 
 /**************************************
 * 					 	 SIGNUP    							*
 ***************************************/
-// POST /user
+
+// POST /signup
 // create a new user
 // returns a token that can be used to further access the authenticated points of the api
 func Signup(c *gin.Context) {
@@ -61,30 +63,31 @@ func Signup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use!"})
 		return
 	}
+
 	newUser := model.User{Email: email, Password: pass}
 	model.DB.Create(&newUser)
 
-	// generate a new session token
-	token := generateToken()
-	session.Set(token, newUser.ID)
+	// save userID in session
+	session.Set("userID", newUser.ID)
 	// save session
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error saving user session"})
 		return
 	}
 
-	c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
-	// should return a token that can be used to access authenticated points later on
-	c.JSON(http.StatusOK, gin.H{"data": "successfully created new user",
-		"id":    newUser.ID,
-		"token": token,
-	})
+	// c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
+	// // should return a token that can be used to access authenticated points later on
+	// c.JSON(http.StatusOK, gin.H{"data": "successfully created new user",
+	// 	"id":    newUser.ID,
+	// 	"token": token,
+	// })
 }
 
 /**************************************
 * 					 	 LOGIN    							*
 ***************************************/
-// GET /user
+
+// POST /login
 // Login a user with email/password combo using basic auth
 // email and password should be joined with a ':' and then encoded with base64
 // then attached to an 'Authorization' header
@@ -92,8 +95,9 @@ func Signup(c *gin.Context) {
 // returns a 404 error code if the user couldn't be found
 // returns a 200 ok code if the user was found, attatched is a token that can be used fro future requests
 func Login(c *gin.Context) {
-
+	session := sessions.Default(c)
 	auth := c.Request.Header.Get("Authorization")
+
 	// base64 decode
 	dec, _ := b64.StdEncoding.DecodeString(auth)
 	// split on ':'
@@ -116,34 +120,27 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token := generateToken()
-	// save the token to the session
-	session := sessions.Default(c)
-	session.Set(token, loggedInUser.ID)
-	session.Options(sessions.Options{
-		MaxAge: 3600 * 12, // set session to expire in 12 hours
-	})
-	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
-		return
-	}
+	// save the user ID in the session
+	session.Set("userID", loggedInUser.ID)
+	logger.Log.Info().Interface("userID", session.Get("userID")).Msg("user now logged in")
 
-	c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
+	// update session
+	session.Save()
 
 	// should return a token that can be used to access authenticated points later on
-	c.JSON(http.StatusOK, gin.H{"data": gin.H{"token": token}})
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 /**************************************
 * 					 	 LOGOUT    							*
 ***************************************/
+
 // GET /logout
 // logs a user out of the application
-//
 func Logout(c *gin.Context) {
 
-	// fetch cookie from request
-	token, err := c.Request.Cookie("token")
+	// check that the token cookie was passed along into the session
+	_, err := c.Request.Cookie("token")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "No session cookie passed"})
 		return
@@ -151,17 +148,27 @@ func Logout(c *gin.Context) {
 
 	session := sessions.Default(c)
 
-	// check if there is a valid token in the session
-	if user := session.Get(token.Value); user == nil {
+	// check if there is a valid user in the session
+	if user := session.Get("userID"); user == nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid session token"})
 		return
 	}
 
-	// remove token and save session
-	session.Delete(token)
+	// remove userID and save session
+	session.Clear()
+
+	// this issue solved the problem of the session persisting even once it's been deleted
+	// https://github.com/gin-contrib/sessions/issues/89
+	session.Options(sessions.Options{Path: "/", MaxAge: -1}) // this sets the cookie with a MaxAge of 0
+
+	logger.Log.Info().
+		Interface("userID", session.Get("userID")).
+		Msg("cleared the session")
+
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save session"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{})
 }
