@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 /*
@@ -23,22 +22,22 @@ https://gorm.io/docs/associations.html#Association-Mode
 
 // function to simplify getting a user from session
 func getUser(c *gin.Context) (model.User, error) {
-	// token, _ := c.Request.Cookie("token")
 	session := sessions.Default(c)
 	// gets the user id associated with the token, converts it to a string
 	id := session.Get("userID").(uint)
 	logger.Log.Info().Uint("id", id).Msg("id fetched from session")
-	var user model.User
-	findUser := model.User{Model: gorm.Model{ID: id}}
-	//TODO check result for error
-	result := model.DB.First(&user, findUser)
-	return user, result.Error
+	// var user model.User
+	// findUser := model.User{Model: gorm.Model{ID: id}}
+	// //TODO check result for error
+	// result := model.DB.First(&user, findUser)
+	return model.FindUser(id)
 }
 
 /**************************************
 *					 	 FETCH ITEM 							*
 ***************************************/
 
+// returns all the items
 func GetItems(c *gin.Context) {
 	user, err := getUser(c)
 	if err != nil {
@@ -46,13 +45,15 @@ func GetItems(c *gin.Context) {
 		return
 	}
 
-	model.DB.Model(&user).Related(&user.Products)
-	c.JSON(http.StatusOK, user.Products)
+	products := user.GetUserProducts()
+	c.JSON(http.StatusOK, products)
 }
 
 /**************************************
 *						CREATE ITEM 							*
 ***************************************/
+
+// a struct to bind post request data to
 type CreateItemInput struct {
 	Url      string `json:"url" binding:"required"`
 	ItemName string `json:"item_name" binding:"required"`
@@ -103,6 +104,7 @@ func CreateItem(c *gin.Context) {
 /**************************************
 *						DELETE ITEM 							*
 ***************************************/
+
 // DELETE /private/items/:id
 // removes a product with the specified id from the database
 func DeleteItem(c *gin.Context) {
@@ -125,13 +127,18 @@ func DeleteItem(c *gin.Context) {
 	}
 
 	// remove association between product and user
-	model.DB.Model(&user).Association("Products").Delete(&productToDelete)
+	// model.DB.Model(&user).Association("Products").Delete(&productToDelete)
 
 	// NOTE: at the moment the following line is doing a soft delete, so the object is still in the db
 	// BUT it cant be queried, so calling GetItems will not return the object in the response
-	model.DB.Delete(&productToDelete)
+	// model.DB.Delete(&productToDelete)
+	err = user.DeleteProduct(productToDelete)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 
-	c.JSON(http.StatusOK, gin.H{"data": "removed product sucessfully", "product": productToDelete})
+	c.JSON(http.StatusOK, gin.H{"message": "removed product sucessfully", "product": productToDelete})
 }
 
 /**************************************

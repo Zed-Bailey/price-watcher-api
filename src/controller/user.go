@@ -16,18 +16,6 @@ import (
 // https://gorm.io/docs/query.html
 
 /**************************************
-* 					 	 UTILITY   							*
-***************************************/
-
-//
-// generates a random 30 character token, proably not secure but for now it'll do
-// func generateToken() string {
-// 	b := make([]byte, 30)
-// 	rand.Read(b)
-// 	return hex.EncodeToString(b)
-// }
-
-/**************************************
 * 					 	 SIGNUP    							*
 ***************************************/
 
@@ -75,12 +63,6 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	// c.SetCookie("token", token, 60*60*12, "/", "localhost", false, false)
-	// // should return a token that can be used to access authenticated points later on
-	// c.JSON(http.StatusOK, gin.H{"data": "successfully created new user",
-	// 	"id":    newUser.ID,
-	// 	"token": token,
-	// })
 }
 
 /**************************************
@@ -127,7 +109,6 @@ func Login(c *gin.Context) {
 	// update session
 	session.Save()
 
-	// should return a token that can be used to access authenticated points later on
 	c.JSON(http.StatusOK, gin.H{})
 }
 
