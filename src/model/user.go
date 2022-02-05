@@ -1,6 +1,10 @@
 package model
 
-import "github.com/jinzhu/gorm"
+import (
+	"errors"
+
+	"github.com/jinzhu/gorm"
+)
 
 type User struct {
 	gorm.Model
@@ -27,7 +31,29 @@ func FindUser(id uint) (User, error) {
 	return user, result.Error
 }
 
-// ceate a new user
-func CreateNewUser(newUser User) error {
-	return nil
+// creates a new user, will return an error if the email is already in use
+func CreateNewUser(newUser *User) error {
+	// check if the email already exists in the database
+	var existing User
+	result := DB.First(&existing, User{Email: newUser.Email})
+	// if a row was returned then the email is already in use
+	if result.RowsAffected != 0 {
+		return errors.New("email already in use")
+	}
+
+	return DB.Create(&newUser).Error
+}
+
+// Checks the database for a user with matching email/password combination
+// returns true if there is a match false otherwise
+// if true is returned then the returned User struct will contain the users information
+func CheckUserDoesExist(email string, pass string) (bool, User) {
+
+	var loggedInUser User
+
+	// select the first user with matching email/password combo
+	result := DB.Where(&User{Email: email, Password: pass}).First(&loggedInUser)
+
+	// check if a record was returned
+	return !errors.Is(result.Error, gorm.ErrRecordNotFound), loggedInUser
 }
