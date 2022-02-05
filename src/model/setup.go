@@ -5,7 +5,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
-// database instance
+// database instance set by one of the SetupDatabase methods
 var DB *gorm.DB
 
 // Connect to the database
