@@ -45,7 +45,11 @@ func GetItems(c *gin.Context) {
 		return
 	}
 
-	products := user.GetUserProducts()
+	products, err := user.GetAllProducts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
 	c.JSON(http.StatusOK, products)
 }
 
@@ -90,13 +94,18 @@ func CreateItem(c *gin.Context) {
 		NextCheck:    nextCheck.Format("01/02/2006"),
 		CurrentPrice: currPrice,
 	}
-	// add the new item to the user via association
-	result := model.DB.Model(&user).Association("Products").Append(&item)
 
-	if result.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+	if err = user.AddProduct(item); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 		return
 	}
+
+	// add the new item to the user via association
+	// result := model.DB.Model(&user).Association("Products").Append(&item)
+	// if result.Error != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": result.Error})
+	// 	return
+	// }
 
 	c.JSON(http.StatusOK, gin.H{"data": item})
 }
@@ -152,6 +161,12 @@ type UpdateItemInput struct {
 // PATCH /private/items/:id
 func UpdateItem(c *gin.Context) {
 
+	user, err := getUser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+
 	// find product
 	var updateProduct model.Product
 	if err := model.DB.Where("id = ?", c.Param("id")).First(&updateProduct).Error; err != nil {
@@ -167,6 +182,11 @@ func UpdateItem(c *gin.Context) {
 	}
 
 	// update product
-	model.DB.Model(&updateProduct).Update(input)
+	// model.DB.Model(&updateProduct).Update(input)
+	if err := user.UpdateProduct(&updateProduct, input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"data": "updated product", "product": updateProduct})
 }

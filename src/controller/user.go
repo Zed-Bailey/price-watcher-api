@@ -4,13 +4,11 @@ import (
 	"RestService/src/logger"
 	"RestService/src/model"
 	b64 "encoding/base64"
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 )
 
 // https://gorm.io/docs/query.html
@@ -36,6 +34,7 @@ func Signup(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to decode authorization header"})
 		return
 	}
+	// parse the split string and trim the strings
 	email := split[0]
 	pass := split[1]
 	if strings.Trim(email, " ") == " " || strings.Trim(pass, " ") == " " {
@@ -43,17 +42,17 @@ func Signup(c *gin.Context) {
 		return
 	}
 
-	// check if the email already exists in the database
-	var existing model.User
-	result := model.DB.First(&existing, model.User{Email: email})
+	newUser := model.User{Email: email, Password: pass}
 
-	if result.RowsAffected != 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "email already in use!"})
+	// create the user
+	if result := model.CreateNewUser(&newUser); result != nil {
+		if result.Error() == "email already in use" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "That email is already in use"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": result})
+		}
 		return
 	}
-
-	newUser := model.User{Email: email, Password: pass}
-	model.DB.Create(&newUser)
 
 	// save userID in session
 	session.Set("userID", newUser.ID)
@@ -63,6 +62,8 @@ func Signup(c *gin.Context) {
 		return
 	}
 
+	// return ok status
+	c.JSON(http.StatusOK, gin.H{})
 }
 
 /**************************************
@@ -91,19 +92,14 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	var loggedInUser model.User
-
-	// select the first user with matching email/password combo
-	result := model.DB.Where(&model.User{Email: split[0], Password: split[1]}).First(&loggedInUser)
-
-	// check if a record was returned
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No user found with that email/password"})
+	exists, user := model.CheckUserDoesExist(split[0], split[1])
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email or password is incorrect"})
 		return
 	}
 
 	// save the user ID in the session
-	session.Set("userID", loggedInUser.ID)
+	session.Set("userID", user.ID)
 	logger.Log.Info().Interface("userID", session.Get("userID")).Msg("user now logged in")
 
 	// update session
