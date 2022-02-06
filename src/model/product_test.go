@@ -41,7 +41,7 @@ func (suite *ProductTestSuite) AfterTest(suiteName, testName string) {
 	// model.DB.Unscoped().Delete(model.Product{})
 	// model.DB.Exec("DELETE FROM products")
 	model.DB.Where("1=1").Unscoped().Delete(&model.Product{})
-	// for sime reason the TestDeleteProduct fails if this line isn't here?
+	// for some reason one of the tests will fail if this line is not here
 	suite.testUser.GetAllProducts()
 	// fmt.Printf("num products after delete: %v\n", len(prod))
 }

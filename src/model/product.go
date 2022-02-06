@@ -22,9 +22,8 @@ func (u *User) GetAllProducts() ([]Product, error) {
 	// products can be directly returned through the attached User interface 'u *User'
 	// it would simplify this function to one line,
 	// but i may confuse myself how the function returns in the future
-	user := u
-	result := DB.Model(&user).Related(&user.Products)
-	return user.Products, result.Error
+	result := DB.Model(&u).Related(&u.Products)
+	return u.Products, result.Error
 }
 
 // fetches a single product
