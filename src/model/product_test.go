@@ -23,7 +23,6 @@ func (suite *ProductTestSuite) SetupSuite() {
 	suite.Nil(err, "Failed to add user to database, err:%v\n", err)
 }
 
-// func (suite *ProductTestSuite) TestAddProduct() {
 func (suite *ProductTestSuite) BeforeTest(suiteName, testName string) {
 	product := model.Product{
 		ItemName:     "testProduct",
@@ -37,13 +36,9 @@ func (suite *ProductTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *ProductTestSuite) AfterTest(suiteName, testName string) {
-	// model.DB.Model(&model.Product{}).Unscoped().Delete(model.Product{})
-	// model.DB.Unscoped().Delete(model.Product{})
-	// model.DB.Exec("DELETE FROM products")
 	model.DB.Where("1=1").Unscoped().Delete(&model.Product{})
-	// for some reason one of the tests will fail if this line is not here
-	suite.testUser.GetAllProducts()
-	// fmt.Printf("num products after delete: %v\n", len(prod))
+	// assign the users products to nil as we deleted them all
+	suite.testUser.Products = nil
 }
 
 func (suite *ProductTestSuite) TestGetProduct() {
